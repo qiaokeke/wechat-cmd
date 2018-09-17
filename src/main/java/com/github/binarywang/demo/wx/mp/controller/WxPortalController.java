@@ -1,6 +1,7 @@
 package com.github.binarywang.demo.wx.mp.controller;
 
 import com.github.binarywang.demo.wx.mp.config.WxMpConfiguration;
+import me.chanjar.weixin.common.api.WxConsts;
 import me.chanjar.weixin.mp.api.WxMpService;
 import me.chanjar.weixin.mp.bean.message.WxMpXmlMessage;
 import me.chanjar.weixin.mp.bean.message.WxMpXmlOutMessage;
@@ -25,7 +26,7 @@ public class WxPortalController {
                           @RequestParam(name = "echostr", required = false) String echostr) {
         final WxMpService wxService = WxMpConfiguration.getMpServices().get(appid);
 
-        this.logger.info("\n接收到来自微信服务器的认证消息：[{}, {}, {}, {}]", signature,
+        this.logger.info("\n接收到来自微信服务器的GET认证消息：[{}, {}, {}, {}]", signature,
             timestamp, nonce, echostr);
 
         if (StringUtils.isAnyBlank(signature, timestamp, nonce, echostr)) {
@@ -33,8 +34,11 @@ public class WxPortalController {
         }
 
         if (wxService.checkSignature(timestamp, nonce, signature)) {
+            logger.info(echostr);
             return echostr;
         }
+
+        logger.info("非法");
 
         return "非法请求";
     }
@@ -48,7 +52,7 @@ public class WxPortalController {
                        @RequestParam(name = "encrypt_type", required = false) String encType,
                        @RequestParam(name = "msg_signature", required = false) String msgSignature) {
         final WxMpService wxService = WxMpConfiguration.getMpServices().get(appid);
-        this.logger.info("\n接收微信请求：[signature=[{}], encType=[{}], msgSignature=[{}],"
+        this.logger.info("\n接收微信POST请求：[signature=[{}], encType=[{}], msgSignature=[{}],"
                 + " timestamp=[{}], nonce=[{}], requestBody=[\n{}\n] ",
             signature, encType, msgSignature, timestamp, nonce, requestBody);
 
@@ -83,6 +87,11 @@ public class WxPortalController {
         return out;
     }
 
+    @PostMapping(produces = "text/plain;charset=utf-8",value = "/getUrl")
+    public String buildOauth2Url(@PathVariable String appid,@RequestParam String url){
+        final WxMpService wxService = WxMpConfiguration.getMpServices().get(appid);
+        return wxService.oauth2buildAuthorizationUrl(url,WxConsts.OAuth2Scope.SNSAPI_USERINFO,null);
+    }
     private WxMpXmlOutMessage route(WxMpXmlMessage message, String appid) {
         try {
             return WxMpConfiguration.getRouters().get(appid).route(message);
